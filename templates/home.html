@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Upload and Process</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #000000;
+            margin: 0;
+            padding: 20px;
+            color: #f8f9fa;
+        }
+        .container {
+            background: #1a1a1a;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            width: 90%;
+            max-width: 700px;
+            transition: all 0.3s ease;
+            max-height: 80vh;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #007BFF #2c2c2c;
+        }
+        .container::-webkit-scrollbar {
+            width: 8px;
+        }
+        .container::-webkit-scrollbar-track {
+            background: #2c2c2c;
+            border-radius: 4px;
+        }
+        .container::-webkit-scrollbar-thumb {
+            background-color: #007BFF;
+            border-radius: 4px;
+        }
+        .table-excel-mode .container::-webkit-scrollbar-thumb {
+            background-color: #28a745;
+        }
+        .container h2 {
+            margin-top: 0;
+            color: #f8f9fa;
+            font-weight: 600;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #2c2c2c;
+            border-radius: 8px;
+            display: none;
+            border: 1px solid #444;
+        }
+        #outputText {
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            text-align: left;
+            padding: 10px;
+            background: #333;
+            border-radius: 4px;
+            font-family: monospace;
+            border: 1px solid #444;
+            color: #f8f9fa;
+            scrollbar-width: thin;
+            scrollbar-color: #007BFF #2c2c2c;
+        }
+        #outputText::-webkit-scrollbar {
+            width: 8px;
+        }
+        #outputText::-webkit-scrollbar-track {
+            background: #2c2c2c;
+        }
+        #outputText::-webkit-scrollbar-thumb {
+            background-color: #007BFF;
+            border-radius: 4px;
+        }
+        .table-excel-mode #outputText::-webkit-scrollbar-thumb {
+            background-color: #28a745;
+        }
+        button {
+            margin: 10px 5px;
+            padding: 12px 20px;
+            background: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            font-size: 0.95rem;
+        }
+        .table-excel-mode button {
+            background: #28a745;
+        }
+        button:disabled {
+            background: #444 !important;
+            cursor: not-allowed;
+        }
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .table-excel-mode button:hover:not(:disabled) {
+            background: #218838;
+        }
+        .note {
+            margin-top: 15px;
+            font-size: 0.85rem;
+            color: #adb5bd;
+        }
+        .mode-buttons {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 25px;
+            width: 100%;
+        }
+        .main-mode {
+            width: 100%;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        .main-mode button {
+            flex: 1;
+            max-width: 200px;
+        }
+        .sub-modes {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            gap: 10px;
+        }
+        .sub-modes button {
+            flex: 1;
+            max-width: 140px;
+        }
+        #loadingIndicator {
+            display: none;
+            margin: 15px 0;
+        }
+        #downloadButton {
+            display: none;
+            margin-top: 15px;
+            padding: 12px 20px;
+            background: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        #downloadButton:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border-left-color: #007BFF;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        .table-excel-mode .spinner {
+            border-left-color: #28a745;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .mode-group {
+            display: none;
+            width: 100%;
+        }
+        .active {
+            display: block;
+        }
+        .file-input-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 20px 0;
+            width: 100%;
+        }
+        .file-input-container > * {
+            margin-bottom: 15px;
+        }
+        input[type="file"] {
+            padding: 10px;
+            background: #2c2c2c;
+            border-radius: 6px;
+            border: 1px dashed #555;
+            width: 80%;
+            max-width: 350px;
+            color: #f8f9fa;
+        }
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 80%;
+            max-width: 350px;
+            overflow: hidden;
+        }
+        .file-name {
+            margin-top: 5px;
+            font-size: 0.9rem;
+            color: #adb5bd;
+        }
+        .copy-button {
+            background: #6c757d;
+        }
+        .table-excel-mode .copy-button {
+            background: #28a745;
+        }
+        .copy-button:hover {
+            background: #5a6268;
+        }
+        .table-excel-mode .copy-button:hover {
+            background: #218838;
+        }
+        .table-to-excel {
+            background: #28a745;
+        }
+        .table-to-excel:hover:not(:disabled) {
+            background: #218838;
+        }
+    </style>
+</head>
+<body id="mainBody">
+    <div class="container">
+        <div class="mode-buttons">
+            <div class="main-mode">
+                <button id="textExtractionMode" onclick="setMainMode('textExtraction')" style="background-color: #0056b3;">Text Extraction</button>
+                <button id="tableToExcelMode" onclick="setMainMode('tableToExcel')">Table to Excel</button>
+            </div>
+            
+            <div id="textExtractionGroup" class="mode-group active">
+                <div class="sub-modes">
+                    <button id="basicMode" onclick="setSubMode('basic')" style="background-color: #0056b3;">Basic</button>
+                    <button id="advancedMode" onclick="setSubMode('advanced')">Advanced</button>
+                </div>
+            </div>
+            
+            <div id="tableToExcelGroup" class="mode-group">
+                <button id="toExcel" class="table-to-excel" onclick="processTableImage()" disabled>To Excel</button>
+            </div>
+        </div>
+        
+        <h2>Upload an Image</h2>
+        <div class="file-input-container">
+            <div class="file-input-wrapper">
+                <input type="file" id="imageUpload" accept="image/*" onchange="handleFileUpload()">
+            </div>
+            <div class="file-name" id="fileName"></div>
+            <button id="processButton" onclick="processImage()">Process</button>
+        </div>
+        
+        <div id="loadingIndicator">
+            <div class="spinner"></div>
+            <p>Processing...</p>
+        </div>
+        <div id="result">
+            <p id="outputText">Processed result will appear here</p>
+            <button class="copy-button" onclick="copyToClipboard()">Copy</button>
+        </div>
+        <a id="downloadButton" href="#" download>Download Excel File</a>
+        <p class="note">Only PNG, JPG, or JPEG formats are supported.</p>
+    </div>
+
+    <script>
+        let mode = 'basic';
+        let mainMode = 'textExtraction';
+        let processedText = "";
+        let downloadUrl = "";
+        let uploadedFile = null;
+    
+        // Initialize on page load
+        window.onload = function() {
+            setMainMode('textExtraction');
+            setSubMode('basic');
+            updateInterface();
+        }
+        
+        function handleFileUpload() {
+            const fileInput = document.getElementById('imageUpload');
+            const fileName = document.getElementById('fileName');
+            
+            if (fileInput.files.length > 0) {
+                uploadedFile = fileInput.files[0];
+                fileName.textContent = uploadedFile.name;
+                
+                // If in tableToExcel mode, start processing immediately
+                if (mainMode === 'tableToExcel') {
+                    autoProcessTableImage();
+                }
+            } else {
+                fileName.textContent = '';
+                uploadedFile = null;
+            }
+        }
+    
+        function setMainMode(selectedMainMode) {
+            mainMode = selectedMainMode;
+            const bodyElement = document.getElementById('mainBody');
+            
+            // Update body class for global styling
+            if (selectedMainMode === 'tableToExcel') {
+                bodyElement.classList.add('table-excel-mode');
+            } else {
+                bodyElement.classList.remove('table-excel-mode');
+            }
+            
+            // Update button styles
+            document.getElementById('textExtractionMode').style.backgroundColor = 
+                selectedMainMode === 'textExtraction' ? '#0056b3' : (selectedMainMode === 'tableToExcel' ? '#28a745' : '#007BFF');
+            document.getElementById('tableToExcelMode').style.backgroundColor = 
+                selectedMainMode === 'tableToExcel' ? '#218838' : '#007BFF';
+            
+            // Show/hide appropriate mode groups
+            document.getElementById('textExtractionGroup').classList.toggle('active', 
+                selectedMainMode === 'textExtraction');
+            document.getElementById('tableToExcelGroup').classList.toggle('active', 
+                selectedMainMode === 'tableToExcel');
+            
+            updateInterface();
+            
+            // If switching to tableToExcel and file is already uploaded, start processing
+            if (selectedMainMode === 'tableToExcel' && uploadedFile) {
+                autoProcessTableImage();
+            }
+        }
+        
+        function updateInterface() {
+            // Show/hide the process button based on mode
+            const processButton = document.getElementById('processButton');
+            processButton.style.display = mainMode === 'textExtraction' ? 'inline-block' : 'none';
+            
+            // Reset the download button
+            document.getElementById('downloadButton').style.display = 'none';
+            
+            // In table mode, check if we have a file and update toExcel button accordingly
+            if (mainMode === 'tableToExcel') {
+                const toExcelButton = document.getElementById('toExcel');
+                toExcelButton.disabled = !uploadedFile;
+            }
+        }
+    
+        function setSubMode(selectedMode) {
+            mode = selectedMode;
+            document.getElementById('basicMode').style.backgroundColor = 
+                selectedMode === 'basic' ? '#0056b3' : '#007BFF';
+            document.getElementById('advancedMode').style.backgroundColor = 
+                selectedMode === 'advanced' ? '#0056b3' : '#007BFF';
+        }
+        
+        // Auto-process function for table-to-excel
+        async function autoProcessTableImage() {
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const toExcelButton = document.getElementById('toExcel');
+            
+            // Show loading indicator
+            loadingIndicator.style.display = 'block';
+            toExcelButton.disabled = true;
+            
+            if (!uploadedFile) {
+                loadingIndicator.style.display = 'none';
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('image', uploadedFile);
+    
+            try {
+                const response = await fetch('/upload?mode=advanced', {
+                    method: 'POST',
+                    body: formData
+                });
+    
+                if (!response.ok) {
+                    throw new Error('Failed to process image');
+                }
+    
+                const data = await response.json();
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                processedText = data.result;
+                // Enable the To Excel button now that we have processed text
+                toExcelButton.disabled = false;
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error processing image: ' + error.message);
+            } finally {
+                // Hide loading indicator
+                loadingIndicator.style.display = 'none';
+            }
+        }
+    
+        async function processImage() {
+            if (!uploadedFile) {
+                alert("Please upload an image first.");
+                return;
+            }
+            
+            const resultDiv = document.getElementById('result');
+            const outputText = document.getElementById('outputText');
+            const processButton = document.getElementById('processButton');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const downloadButton = document.getElementById('downloadButton');
+            
+            // Reset
+            downloadButton.style.display = 'none';
+            
+            // Show loading indicator
+            processButton.disabled = true;
+            loadingIndicator.style.display = 'block';
+            resultDiv.style.display = 'none';
+            
+            const formData = new FormData();
+            formData.append('image', uploadedFile);
+    
+            try {
+                const response = await fetch(`/upload?mode=${mode}`, {
+                    method: 'POST',
+                    body: formData
+                });
+    
+                if (!response.ok) {
+                    throw new Error('Failed to process image');
+                }
+    
+                const data = await response.json();
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                processedText = data.result; 
+                outputText.innerText = processedText;
+                resultDiv.style.display = 'block';
+                
+                // Scroll to the result
+                resultDiv.scrollIntoView({ behavior: 'smooth' });
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error processing image: ' + error.message);
+            } finally {
+                // Hide loading indicator
+                processButton.disabled = false;
+                loadingIndicator.style.display = 'none';
+            }
+        }
+    
+        async function processTableImage() {
+            if (!uploadedFile) {
+                alert("Please upload an image first.");
+                return;
+            }
+            
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const downloadButton = document.getElementById('downloadButton');
+            const toExcelButton = document.getElementById('toExcel');
+            
+            // Reset
+            downloadButton.style.display = 'none';
+            
+            // Show loading indicator
+            loadingIndicator.style.display = 'block';
+            toExcelButton.disabled = true;
+            
+            const formData = new FormData();
+            formData.append('image', uploadedFile);
+    
+            try {
+                const response = await fetch('/exportToExcel', {
+                    method: 'POST',
+                    body: formData
+                });
+    
+                if (!response.ok) {
+                    throw new Error('Failed to process table image');
+                }
+    
+                const data = await response.json();
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+    
+                downloadButton.href = data.file_url;
+                downloadButton.style.display = 'inline-block';
+                
+                // Scroll to the download button
+                downloadButton.scrollIntoView({ behavior: 'smooth' });
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error processing table image: ' + error.message);
+            } finally {
+                // Hide loading indicator
+                loadingIndicator.style.display = 'none';
+                toExcelButton.disabled = false;
+            }
+        }
+    
+        function copyToClipboard() {
+            navigator.clipboard.writeText(processedText)
+                .then(() => {
+                    const copyButton = document.querySelector('.copy-button');
+                    copyButton.textContent = "Copied!";
+                    setTimeout(() => {
+                        copyButton.textContent = "Copy";
+                    }, 2000);
+                })
+                .catch(err => console.error("Error copying text: ", err));
+        }
+    </script>
+</body>
+</html>
