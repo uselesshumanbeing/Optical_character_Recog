@@ -1,5 +1,8 @@
 from huggingface_hub import InferenceClient
-apikey = "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"
+from dotenv import load_dotenv
+import os
+load_dotenv()
+apikey=os.getenv("api_key")
 repo_id = "mistralai/Mistral-7B-Instruct-v0.3"
 client = InferenceClient(api_key=apikey)
 

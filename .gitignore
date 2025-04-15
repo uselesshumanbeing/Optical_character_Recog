@@ -1,0 +1,6 @@
+.env
+image_to_text.ipynb
+KerasOCR.ipynb
+handwritten.ipynb
+sample.csv
+imgtraining

@@ -11,8 +11,12 @@ from actualocr import getgoodtext, translate_text
 from chat import chatbot
 from imgtoexcel import main
 from imgtodocx import texttodoc
+from dotenv import load_dotenv
+
+load_dotenv()
 app = Flask(__name__)
-UPLOAD_FOLDER = "/Users/divypashine/College/Project/uploads"
+UPLOAD_FOLDER=os.getenv("UPLOAD_FOLDER")
+
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024 # 100 MB
