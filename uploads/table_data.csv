@@ -1,17 +1,17 @@
-# Python program to explain cv2.imshow() method
-# importing cv2
-import cv2
-# path
-path = r'C:\Users\Rajnish\Desktop\geeksforgeeks.png'
-# Reading an image in default mode
-image = cv2.imread(path)
-# Window name in which image is displayed
-window_name = 'image'
-# Using cv2.imshow() method
-# Displaying the image
-"cv2.imshow(window_name, image)"
-# waits for user to press any key
-# (this is necessary to avoid Python kernel form crashing)
-cv2.waitKey(0)
-# closing all open windows
-cv2.destroyAllwindows()
+,A,B,c,D,E
+1,Last NameSales,,Country,Quarter,
+2,Smith,"$16,753.00 UK","$16,753.00 UK",Qtr 3,
+3,Johnson,"$14,808.00 USA","$14,808.00 USA",Qtr 4,
+4,Williams,"$10,644.00 UK","$10,644.00 UK",Qtr 2,
+5,Jones,"$1,390.00 USA","$1,390.00 USA",Qtr 3,
+6,Brown,"$4,865.00 USA","$4,865.00 USA",Qtr 4,
+7,Williams,"$12,438.00 UK","$12,438.00 UK",Qtr 1,
+8,Johnson,"$9,339.00 UK","$9,339.00 UK",Qtr 2,
+9,Smith,"$18,919.00 USA","$18,919.00 USA",Qtr 3,
+10,Jones,"$9,213.00 USA","$9,213.00 USA",Qtr 4,
+11,Jones,"$7,433.00 UK","$7,433.00 UK",Qtr 1,
+12,Brown,"$3,255.00 USA","$3,255.00 USA",Qtr 2,
+13,Williams,"$14,867.00 USA","$14,867.00 USA",Qtr 3,
+14,Williams,"$19,302.00 UK","$19,302.00 UK",Qtr 4,
+15,Smith,"$9,698.00 USA","$9,698.00 USA",Qtr 1,
+16,,,,,

@@ -45,6 +45,9 @@
         .table-excel-mode .container::-webkit-scrollbar-thumb {
             background-color: #28a745;
         }
+        .chatbot-mode .container::-webkit-scrollbar-thumb {
+            background-color: #dc3545;
+        }
         .container h2 {
             margin-top: 0;
             color: #f8f9fa;
@@ -85,6 +88,9 @@
         .table-excel-mode #outputText::-webkit-scrollbar-thumb {
             background-color: #28a745;
         }
+        .chatbot-mode #outputText::-webkit-scrollbar-thumb {
+            background-color: #dc3545;
+        }
         button {
             margin: 10px 5px;
             padding: 12px 20px;
@@ -100,6 +106,9 @@
         .table-excel-mode button {
             background: #28a745;
         }
+        .chatbot-mode button {
+            background: #dc3545;
+        }
         button:disabled {
             background: #444 !important;
             cursor: not-allowed;
@@ -110,6 +119,9 @@
         }
         .table-excel-mode button:hover:not(:disabled) {
             background: #218838;
+        }
+        .chatbot-mode button:hover:not(:disabled) {
+            background: #c82333;
         }
         .note {
             margin-top: 15px;
@@ -177,6 +189,9 @@
         .table-excel-mode .spinner {
             border-left-color: #28a745;
         }
+        .chatbot-mode .spinner {
+            border-left-color: #dc3545;
+        }
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
@@ -219,11 +234,19 @@
             font-size: 0.9rem;
             color: #adb5bd;
         }
+        .error-message {
+            color: #dc3545;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
         .copy-button {
             background: #6c757d;
         }
         .table-excel-mode .copy-button {
             background: #28a745;
+        }
+        .chatbot-mode .copy-button {
+            background: #dc3545;
         }
         .copy-button:hover {
             background: #5a6268;
@@ -231,11 +254,57 @@
         .table-excel-mode .copy-button:hover {
             background: #218838;
         }
+        .chatbot-mode .copy-button:hover {
+            background: #c82333;
+        }
         .table-to-excel {
             background: #28a745;
         }
         .table-to-excel:hover:not(:disabled) {
             background: #218838;
+        }
+        .chatbot-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            margin-top: 20px;
+        }
+        #chatInput {
+            padding: 12px;
+            background: #2c2c2c;
+            border-radius: 6px;
+            border: 1px solid #444;
+            width: 100%;
+            margin-bottom: 10px;
+            color: #f8f9fa;
+            font-size: 1rem;
+            resize: vertical;
+            min-height: 80px;
+        }
+        #chatHistory {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            text-align: left;
+            padding: 10px;
+            background: #2c2c2c;
+            border-radius: 8px;
+            border: 1px solid #444;
+        }
+        .chat-message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 6px;
+        }
+        .user-message {
+            background: #333;
+            align-self: flex-end;
+            margin-left: 20%;
+        }
+        .bot-message {
+            background: #444;
+            align-self: flex-start;
+            margin-right: 20%;
         }
     </style>
 </head>
@@ -245,6 +314,7 @@
             <div class="main-mode">
                 <button id="textExtractionMode" onclick="setMainMode('textExtraction')" style="background-color: #0056b3;">Text Extraction</button>
                 <button id="tableToExcelMode" onclick="setMainMode('tableToExcel')">Table to Excel</button>
+                <button id="chatbotMode" onclick="setMainMode('chatbot')">Chatbot</button>
             </div>
             
             <div id="textExtractionGroup" class="mode-group active">
@@ -257,15 +327,30 @@
             <div id="tableToExcelGroup" class="mode-group">
                 <button id="toExcel" class="table-to-excel" onclick="processTableImage()" disabled>To Excel</button>
             </div>
+            
+            <div id="chatbotGroup" class="mode-group">
+                <p>Ask questions about your extracted text</p>
+            </div>
         </div>
         
-        <h2>Upload an Image</h2>
-        <div class="file-input-container">
-            <div class="file-input-wrapper">
-                <input type="file" id="imageUpload" accept="image/*" onchange="handleFileUpload()">
+        <div id="imageUploadSection">
+            <h2>Upload an Image</h2>
+            <div class="file-input-container">
+                <div class="file-input-wrapper">
+                    <input type="file" id="imageUpload" accept="image/png,image/jpeg,image/jpg" onchange="handleFileUpload()">
+                </div>
+                <div class="file-name" id="fileName"></div>
+                <div class="error-message" id="errorMessage"></div>
+                <button id="processButton" onclick="processImage()">Process</button>
+                <button id="clearButton" onclick="clearFile()" style="background: #6c757d;">Clear</button>
             </div>
-            <div class="file-name" id="fileName"></div>
-            <button id="processButton" onclick="processImage()">Process</button>
+        </div>
+        
+        <div id="chatbotSection" style="display: none;">
+            <h2>Chat with your document</h2>
+            <div id="chatHistory"></div>
+            <textarea id="chatInput" placeholder="Ask a question about your text..."></textarea>
+            <button id="sendChatButton" onclick="sendChatMessage()" disabled>Send Message</button>
         </div>
         
         <div id="loadingIndicator">
@@ -277,243 +362,345 @@
             <button class="copy-button" onclick="copyToClipboard()">Copy</button>
         </div>
         <a id="downloadButton" href="#" download>Download Excel File</a>
-        <p class="note">Only PNG, JPG, or JPEG formats are supported.</p>
+        <p class="note">Only PNG, JPG, or JPEG formats are supported (max 10MB).</p>
     </div>
 
     <script>
         let mode = 'basic';
         let mainMode = 'textExtraction';
         let processedText = "";
-        let downloadUrl = "";
         let uploadedFile = null;
-    
-        // Initialize on page load
+        let chatHistory = [];
+        const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+        const REQUEST_TIMEOUT = 60000; // 60 seconds for OCR
+
         window.onload = function() {
             setMainMode('textExtraction');
             setSubMode('basic');
             updateInterface();
         }
-        
+
         function handleFileUpload() {
             const fileInput = document.getElementById('imageUpload');
             const fileName = document.getElementById('fileName');
-            
+            const errorMessage = document.getElementById('errorMessage');
+            const toExcelButton = document.getElementById('toExcel');
+
+            fileName.textContent = '';
+            errorMessage.textContent = '';
+            uploadedFile = null;
+            toExcelButton.disabled = true;
+
             if (fileInput.files.length > 0) {
-                uploadedFile = fileInput.files[0];
-                fileName.textContent = uploadedFile.name;
-                
-                // If in tableToExcel mode, start processing immediately
-                if (mainMode === 'tableToExcel') {
-                    autoProcessTableImage();
+                const file = fileInput.files[0];
+                const validTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+
+                console.log('Selected file:', file.name, file.type, file.size);
+
+                if (!validTypes.includes(file.type)) {
+                    errorMessage.textContent = 'Invalid file type. Please upload a PNG, JPG, or JPEG image.';
+                    return;
                 }
-            } else {
-                fileName.textContent = '';
-                uploadedFile = null;
+
+                if (file.size > MAX_FILE_SIZE) {
+                    errorMessage.textContent = 'File is too large. Maximum size is 10MB.';
+                    return;
+                }
+
+                uploadedFile = file;
+                fileName.textContent = file.name;
+                toExcelButton.disabled = mainMode !== 'tableToExcel';
             }
         }
-    
+
+        function clearFile() {
+            const fileInput = document.getElementById('imageUpload');
+            const fileName = document.getElementById('fileName');
+            const errorMessage = document.getElementById('errorMessage');
+            const toExcelButton = document.getElementById('toExcel');
+
+            fileInput.value = '';
+            fileName.textContent = '';
+            errorMessage.textContent = '';
+            uploadedFile = null;
+            toExcelButton.disabled = true;
+        }
+
         function setMainMode(selectedMainMode) {
             mainMode = selectedMainMode;
             const bodyElement = document.getElementById('mainBody');
-            
-            // Update body class for global styling
+
+            console.log('Switching to main mode:', selectedMainMode);
+
+            bodyElement.classList.remove('table-excel-mode', 'chatbot-mode');
             if (selectedMainMode === 'tableToExcel') {
                 bodyElement.classList.add('table-excel-mode');
-            } else {
-                bodyElement.classList.remove('table-excel-mode');
+            } else if (selectedMainMode === 'chatbot') {
+                bodyElement.classList.add('chatbot-mode');
             }
-            
-            // Update button styles
+
             document.getElementById('textExtractionMode').style.backgroundColor = 
-                selectedMainMode === 'textExtraction' ? '#0056b3' : (selectedMainMode === 'tableToExcel' ? '#28a745' : '#007BFF');
+                selectedMainMode === 'textExtraction' ? '#0056b3' : '#007BFF';
             document.getElementById('tableToExcelMode').style.backgroundColor = 
                 selectedMainMode === 'tableToExcel' ? '#218838' : '#007BFF';
-            
-            // Show/hide appropriate mode groups
+            document.getElementById('chatbotMode').style.backgroundColor = 
+                selectedMainMode === 'chatbot' ? '#c82333' : '#007BFF';
+
             document.getElementById('textExtractionGroup').classList.toggle('active', 
                 selectedMainMode === 'textExtraction');
             document.getElementById('tableToExcelGroup').classList.toggle('active', 
                 selectedMainMode === 'tableToExcel');
-            
+            document.getElementById('chatbotGroup').classList.toggle('active', 
+                selectedMainMode === 'chatbot');
+
+            document.getElementById('imageUploadSection').style.display = 
+                (selectedMainMode === 'textExtraction' || selectedMainMode === 'tableToExcel') ? 'block' : 'none';
+            document.getElementById('chatbotSection').style.display = 
+                selectedMainMode === 'chatbot' ? 'block' : 'none';
+
             updateInterface();
-            
-            // If switching to tableToExcel and file is already uploaded, start processing
-            if (selectedMainMode === 'tableToExcel' && uploadedFile) {
-                autoProcessTableImage();
+
+            if (selectedMainMode === 'chatbot') {
+                document.getElementById('sendChatButton').disabled = !processedText;
             }
         }
-        
+
         function updateInterface() {
-            // Show/hide the process button based on mode
             const processButton = document.getElementById('processButton');
+            const toExcelButton = document.getElementById('toExcel');
+            const downloadButton = document.getElementById('downloadButton');
+
             processButton.style.display = mainMode === 'textExtraction' ? 'inline-block' : 'none';
-            
-            // Reset the download button
-            document.getElementById('downloadButton').style.display = 'none';
-            
-            // In table mode, check if we have a file and update toExcel button accordingly
-            if (mainMode === 'tableToExcel') {
-                const toExcelButton = document.getElementById('toExcel');
-                toExcelButton.disabled = !uploadedFile;
-            }
+            downloadButton.style.display = 'none';
+            toExcelButton.disabled = mainMode === 'tableToExcel' && !uploadedFile;
+
+            console.log('Interface updated. Main mode:', mainMode, 'Uploaded file:', !!uploadedFile);
         }
-    
+
         function setSubMode(selectedMode) {
             mode = selectedMode;
             document.getElementById('basicMode').style.backgroundColor = 
                 selectedMode === 'basic' ? '#0056b3' : '#007BFF';
             document.getElementById('advancedMode').style.backgroundColor = 
                 selectedMode === 'advanced' ? '#0056b3' : '#007BFF';
+            console.log('Sub-mode set to:', selectedMode);
         }
-        
-        // Auto-process function for table-to-excel
-        async function autoProcessTableImage() {
-            const loadingIndicator = document.getElementById('loadingIndicator');
-            const toExcelButton = document.getElementById('toExcel');
-            
-            // Show loading indicator
-            loadingIndicator.style.display = 'block';
-            toExcelButton.disabled = true;
-            
-            if (!uploadedFile) {
-                loadingIndicator.style.display = 'none';
-                return;
-            }
-            
-            const formData = new FormData();
-            formData.append('image', uploadedFile);
-    
-            try {
-                const response = await fetch('/upload?mode=advanced', {
-                    method: 'POST',
-                    body: formData
-                });
-    
-                if (!response.ok) {
-                    throw new Error('Failed to process image');
-                }
-    
-                const data = await response.json();
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-                
-                processedText = data.result;
-                // Enable the To Excel button now that we have processed text
-                toExcelButton.disabled = false;
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error processing image: ' + error.message);
-            } finally {
-                // Hide loading indicator
-                loadingIndicator.style.display = 'none';
-            }
-        }
-    
+
         async function processImage() {
             if (!uploadedFile) {
-                alert("Please upload an image first.");
+                document.getElementById('errorMessage').textContent = "Please upload a valid image first.";
                 return;
             }
-            
+
             const resultDiv = document.getElementById('result');
             const outputText = document.getElementById('outputText');
             const processButton = document.getElementById('processButton');
             const loadingIndicator = document.getElementById('loadingIndicator');
             const downloadButton = document.getElementById('downloadButton');
-            
-            // Reset
+            const errorMessage = document.getElementById('errorMessage');
+
             downloadButton.style.display = 'none';
-            
-            // Show loading indicator
             processButton.disabled = true;
             loadingIndicator.style.display = 'block';
             resultDiv.style.display = 'none';
-            
+            errorMessage.textContent = '';
+
             const formData = new FormData();
             formData.append('image', uploadedFile);
-    
+
+            console.log('Processing image. Mode:', mode, 'File:', uploadedFile.name);
+
             try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+
                 const response = await fetch(`/upload?mode=${mode}`, {
                     method: 'POST',
-                    body: formData
+                    body: formData,
+                    signal: controller.signal,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
                 });
-    
+
+                clearTimeout(timeoutId);
+
                 if (!response.ok) {
-                    throw new Error('Failed to process image');
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || `Server error: ${response.status}`);
                 }
-    
+
                 const data = await response.json();
+                console.log('Server response:', data);
+
                 if (data.error) {
                     throw new Error(data.error);
                 }
-                
-                processedText = data.result; 
+
+                processedText = data.result || 'No text extracted';
                 outputText.innerText = processedText;
                 resultDiv.style.display = 'block';
-                
-                // Scroll to the result
+
+                if (mainMode === 'chatbot') {
+                    document.getElementById('sendChatButton').disabled = false;
+                }
+
                 resultDiv.scrollIntoView({ behavior: 'smooth' });
             } catch (error) {
-                console.error('Error:', error);
-                alert('Error processing image: ' + error.message);
+                console.error('Upload error:', error);
+                errorMessage.textContent = `Failed to process image: ${error.message}`;
+                if (error.name === 'AbortError') {
+                    errorMessage.textContent = 'Request timed out. OCR processing took too long.';
+                }
             } finally {
-                // Hide loading indicator
                 processButton.disabled = false;
                 loadingIndicator.style.display = 'none';
             }
         }
-    
+
         async function processTableImage() {
             if (!uploadedFile) {
-                alert("Please upload an image first.");
+                document.getElementById('errorMessage').textContent = "Please upload a valid image first.";
                 return;
             }
-            
+
             const loadingIndicator = document.getElementById('loadingIndicator');
             const downloadButton = document.getElementById('downloadButton');
             const toExcelButton = document.getElementById('toExcel');
-            
-            // Reset
+            const errorMessage = document.getElementById('errorMessage');
+
             downloadButton.style.display = 'none';
-            
-            // Show loading indicator
             loadingIndicator.style.display = 'block';
             toExcelButton.disabled = true;
-            
+            errorMessage.textContent = '';
+
             const formData = new FormData();
             formData.append('image', uploadedFile);
-    
+
+            console.log('Processing table image. File:', uploadedFile.name);
+
             try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+
                 const response = await fetch('/exportToExcel', {
                     method: 'POST',
-                    body: formData
+                    body: formData,
+                    signal: controller.signal,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
                 });
-    
+
+                clearTimeout(timeoutId);
+
                 if (!response.ok) {
-                    throw new Error('Failed to process table image');
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || `Server error: ${response.status}`);
                 }
-    
+
                 const data = await response.json();
+                console.log('Server response:', data);
+
                 if (data.error) {
                     throw new Error(data.error);
                 }
-    
+
+                if (!data.file_url) {
+                    throw new Error('No file URL returned from server');
+                }
+
                 downloadButton.href = data.file_url;
                 downloadButton.style.display = 'inline-block';
-                
-                // Scroll to the download button
                 downloadButton.scrollIntoView({ behavior: 'smooth' });
             } catch (error) {
-                console.error('Error:', error);
-                alert('Error processing table image: ' + error.message);
+                console.error('Table processing error:', error);
+                errorMessage.textContent = `Failed to process table: ${error.message}`;
+                if (error.name === 'AbortError') {
+                    errorMessage.textContent = 'Request timed out. Table extraction took too long.';
+                }
             } finally {
-                // Hide loading indicator
                 loadingIndicator.style.display = 'none';
                 toExcelButton.disabled = false;
             }
         }
-    
+
+        async function sendChatMessage() {
+            const chatInput = document.getElementById('chatInput');
+            const chatHistory = document.getElementById('chatHistory');
+            const sendButton = document.getElementById('sendChatButton');
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const errorMessage = document.getElementById('errorMessage');
+
+            const userMessage = chatInput.value.trim();
+            if (!userMessage || !processedText) {
+                return;
+            }
+
+            sendButton.disabled = true;
+            chatInput.disabled = true;
+            loadingIndicator.style.display = 'block';
+            errorMessage.textContent = '';
+
+            addMessageToChat('user', userMessage);
+            chatInput.value = '';
+
+            console.log('Sending chat message. Query:', userMessage);
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+
+                const response = await fetch('/chatbot', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        context: processedText,
+                        query: userMessage
+                    }),
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || `Server error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('Chat response:', data);
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                addMessageToChat('bot', data.response || 'No response received');
+            } catch (error) {
+                console.error('Chat error:', error);
+                addMessageToChat('bot', `Error: ${error.message}`);
+                if (error.name === 'AbortError') {
+                    addMessageToChat('bot', 'Request timed out. Please try again.');
+                }
+            } finally {
+                sendButton.disabled = false;
+                chatInput.disabled = false;
+                loadingIndicator.style.display = 'none';
+            }
+        }
+
+        function addMessageToChat(sender, message) {
+            const chatHistory = document.getElementById('chatHistory');
+            const messageElement = document.createElement('div');
+            messageElement.className = `chat-message ${sender}-message`;
+            messageElement.textContent = message;
+            chatHistory.appendChild(messageElement);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
         function copyToClipboard() {
             navigator.clipboard.writeText(processedText)
                 .then(() => {
@@ -523,7 +710,10 @@
                         copyButton.textContent = "Copy";
                     }, 2000);
                 })
-                .catch(err => console.error("Error copying text: ", err));
+                .catch(err => {
+                    console.error("Copy error:", err);
+                    document.getElementById('errorMessage').textContent = 'Failed to copy text.';
+                });
         }
     </script>
 </body>
